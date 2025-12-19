@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using RangoAgil.Api.EndPointHandlers;
 using RangoAgil.Api.Extensions;
 using RangoAgil.Api.RangoDbContext;
 
@@ -12,7 +11,27 @@ builder.Services.AddDbContext<RangoContext>(
 
 builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
 
+builder.Services.AddProblemDetails();
+
 var app = builder.Build();
+
+if(!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler();
+
+    //For custom error handling uncomment below and comment the line above
+    //app.UseExceptionHandler(configureExceptionBuilder =>
+    //{
+    //    configureExceptionBuilder.Run(
+    //       async context =>
+    //       {
+    //           context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+    //           context.Response.ContentType = "text/html";
+    //           await context.Response.WriteAsync("An unexpected error happened");
+    //       }
+    //     );
+    //});
+}
 
 app.RegisterRangoEndpoints();
 app.RegisterIngredientEndpoints();

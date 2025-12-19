@@ -29,13 +29,20 @@ public static class RangoHandler
     public static async Task<Results<NoContent, Ok<RangoDTO>>> GetRangoByIdAsync(
         RangoContext context,
         IMapper mapper,
+        ILogger<RangoDTO> logger,
         [FromRoute] int rangoId)
     {
         var rango = await context.Rangos.FirstOrDefaultAsync(r => r.Id == rangoId);
         if (rango == null)
+        {
+            logger.LogInformation($"Register not founded id: {rangoId}");
             return TypedResults.NoContent();
+        }
         else
+        {
+            logger.LogInformation($"Register founded id: {rangoId}");
             return TypedResults.Ok(mapper.Map<RangoDTO>(rango));
+        }
     }
 
     public static async Task<Results<NoContent, Ok<RangoDTO>>> GetRangoByNameAsync(
@@ -50,28 +57,41 @@ public static class RangoHandler
             return TypedResults.Ok(mapper.Map<RangoDTO>(rango));
     }
 
-    public static async Task<Created<RangoDTO>> CreateRangoAsync(
+    public static async Task<Results<BadRequest, Created<RangoDTO>>> CreateRangoAsync(
         RangoContext context,
         IMapper mapper,
         [FromBody] CreateRangoDTO createRangoDTO,
         LinkGenerator linkGenerator,
+        ILogger<RangoDTO> logger,
         HttpContext httpContext)
     {
         var entity = mapper.Map<Rango>(createRangoDTO);
         context.Add(entity);
-        await context.SaveChangesAsync();
-        var result = mapper.Map<RangoDTO>(entity);
-        var linkToReturn = linkGenerator.GetUriByName(
-             httpContext,
-            "GetRangos",
-            new { id = result.Id }
-        );
-        return TypedResults.Created(linkToReturn, result);
+        try
+        {
+            await context.SaveChangesAsync();
+            var result = mapper.Map<RangoDTO>(entity);
+            var linkToReturn = linkGenerator.GetUriByName(
+                 httpContext,
+                "GetRangos",
+                new { id = result.Id }
+            );
+
+            logger.LogInformation($"Register created id: {result.Id}");
+            return TypedResults.Created(linkToReturn, result);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError($"Error creating register Error: {ex.Message}");
+            return TypedResults.BadRequest();
+        }
+
     }
 
-    public static async Task<Results<NotFound, NoContent>> UpdateRangoAsync(
+    public static async Task<Results<NotFound, NoContent, BadRequest>> UpdateRangoAsync(
         RangoContext context,
         IMapper mapper,
+        ILogger<RangoDTO> logger,
         [FromBody] UpdateRangoDTO rangoDTO,
         [FromRoute] int rangoId)
     {
@@ -80,19 +100,44 @@ public static class RangoHandler
             return TypedResults.NotFound();
 
         mapper.Map(rangoDTO, entity);
-        await context.SaveChangesAsync();
-        return TypedResults.NoContent();
+
+        try
+        {
+            logger.LogInformation($"Register updated id: {rangoId}");
+            await context.SaveChangesAsync();
+            return TypedResults.NoContent();
+        }
+        catch (Exception ex)
+        {
+            logger.LogError($"Error on updating register Error: {ex.Message}");
+            return TypedResults.BadRequest();
+        }
+        
+        
     }
 
-    public static async Task<Results<NotFound, NoContent>> DeleteRangoAsync(
+    public static async Task<Results<NotFound, NoContent, BadRequest>> DeleteRangoAsync(
         RangoContext context,
+        ILogger<RangoDTO> logger,
         [FromRoute] int rangoId)
     {
         var entity = context.Rangos.FirstOrDefault(x => x.Id == rangoId);
         if (entity == null)
             return TypedResults.NotFound();
         context.Rangos.Remove(entity);
-        await context.SaveChangesAsync();
-        return TypedResults.NoContent();
+        try
+        {
+
+            await context.SaveChangesAsync();
+            logger.LogInformation($"Register deleted id: {rangoId}");
+            return TypedResults.NoContent();
+        }
+        catch (Exception ex)
+        {
+
+            logger.LogError($"Error on deleting register Error: {ex.Message}");
+            return TypedResults.BadRequest();
+        }
+
     }
 }
